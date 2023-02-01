@@ -40,19 +40,25 @@ export default function Cropper() {
 
       ctx?.drawImage(background, 0, 0)
 
-      drawClipArea()
+      drawClipArea({ x: 0, y: 0 })
     }
   }
 
   /**
    * We need to define left, right, top, and bottom boundaries that exist outside the clipping area
    */
-  function drawClipArea() {
+  function drawClipArea(
+    coordinates: { x: number; y: number },
+    selectorSize = 5,
+    action: "drag" | "hover" = "hover"
+  ) {
     if (!canvas.current) return
 
     const ctx = canvas.current.getContext("2d")
 
     if (!ctx) return
+
+    clearCanvas()
 
     // boundaries
     const left = {
@@ -92,6 +98,21 @@ export default function Cropper() {
       y: top.height,
     }
 
+    const topRight = {
+      x: right.x,
+      y: top.height,
+    }
+
+    const bottomLeft = {
+      x: left.width,
+      y: bottom.y,
+    }
+
+    const bottomRight = {
+      x: right.x,
+      y: bottom.y,
+    }
+
     // draw boundaries
     ctx.fillStyle = "rgba(0, 0, 0, 0.4)"
 
@@ -104,9 +125,130 @@ export default function Cropper() {
     ctx.fillRect(bottom.x, bottom.y, bottom.width, bottom.height)
 
     // draw corners
+    const ctx2 = canvas.current.getContext("2d")
+
+    if (!ctx2) return
+
+    ctx2.fillStyle = "white"
+
+    ctx2.beginPath()
+    ctx2.arc(
+      topLeft.x,
+      topLeft.y,
+      detectHover(
+        topLeft,
+        { x: coordinates?.x, y: coordinates?.y },
+        selectorSize / 2
+      )
+        ? selectorSize * 1.5
+        : selectorSize,
+      0,
+      360,
+      false
+    )
+    ctx2.closePath()
+    ctx2.fill()
+
+    ctx2.beginPath()
+    ctx2.arc(
+      topRight.x,
+      topRight.y,
+      detectHover(
+        topRight,
+        { x: coordinates?.x, y: coordinates?.y },
+        selectorSize / 2
+      )
+        ? selectorSize * 1.5
+        : selectorSize,
+      0,
+      360,
+      false
+    )
+    ctx2.closePath()
+    ctx2.fill()
+
+    ctx2.beginPath()
+    ctx2.arc(
+      bottomLeft.x,
+      bottomLeft.y,
+      detectHover(
+        bottomLeft,
+        { x: coordinates?.x, y: coordinates?.y },
+        selectorSize / 2
+      )
+        ? selectorSize * 1.5
+        : selectorSize,
+      0,
+      360,
+      false
+    )
+    ctx2.closePath()
+    ctx2.fill()
+
+    ctx2.beginPath()
+    ctx2.arc(
+      bottomRight.x,
+      bottomRight.y,
+      detectHover(
+        bottomRight,
+        { x: coordinates?.x, y: coordinates?.y },
+        selectorSize / 2
+      )
+        ? selectorSize * 1.5
+        : selectorSize,
+      0,
+      360,
+      false
+    )
+    ctx2.closePath()
+    ctx2.fill()
+
+    if (action === "drag") {
+      console.log("dragging")
+    }
   }
 
-  useEffect(() => drawClipArea(), [])
+  function handleMouseOver(e?: MouseEvent) {
+    if (!canvas.current) return
+    const rect = canvas.current.getBoundingClientRect()
+    if (!e) return
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+    drawClipArea({ x, y })
+  }
+
+  function handleMouseDown(e?: MouseEvent) {
+    if (!canvas.current) return
+    const rect = canvas.current.getBoundingClientRect()
+    if (!e) return
+    const x = e?.clientX - rect.left
+    const y = e?.clientY - rect.top
+
+    drawClipArea({ x, y }, 5, "drag")
+  }
+
+  function detectHover(
+    target: {
+      x: number
+      y: number
+    },
+    coordinates: { x: number; y: number },
+    radius: number
+  ) {
+    const targetX = target.x / 2
+    const targetY = target.y / 2
+
+    if (
+      coordinates.x < targetX + radius &&
+      coordinates.x > targetX - radius &&
+      coordinates.y < targetY + radius &&
+      coordinates.y > targetY - radius
+    ) {
+      return true
+    }
+  }
+
+  useEffect(() => drawClipArea({ x: 0, y: 0 }), [])
 
   function clearCanvas() {
     if (!canvas.current) return
@@ -123,6 +265,8 @@ export default function Cropper() {
           width={500}
           height={300}
           className={style.canvas}
+          onMouseMove={(e) => handleMouseOver(e as any)}
+          onMouseDown={(e) => handleMouseDown(e as any)}
         />
       </div>
       <input type="file" onChange={uploadImage} />
