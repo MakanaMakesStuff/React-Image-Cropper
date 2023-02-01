@@ -1,0 +1,15 @@
+.cropper {
+	background-color: lightcoral;
+	border-radius: 3px;
+	box-shadow: 1px 1px 4px 1px rgba(0, 0, 0, 0.3);
+
+	.canvas {
+		display: block;
+		width: 100%;
+		max-width: 250px;
+		min-width: 250px;
+		height: 100%;
+	}
+
+	.image {}
+}
