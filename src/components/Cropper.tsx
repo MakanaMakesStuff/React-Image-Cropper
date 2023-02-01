@@ -1,4 +1,3 @@
-import NextImage from "next/image"
 import { ChangeEvent, useEffect, useRef, useState } from "react"
 import style from "../styles/Components/Cropper.module.scss"
 
@@ -6,13 +5,15 @@ export default function Cropper() {
   const canvas = useRef<HTMLCanvasElement | null>(null)
   const [settings, setSettings] = useState<{
     clipping: { x: number; y: number; width: number; height: number }
+    corner: "topLeft" | "topRight" | "bottomLeft" | "bottomRight" | null
   }>({
     clipping: {
-      x: 20,
-      y: 20,
-      width: 100,
-      height: 100,
+      x: 10,
+      y: 10,
+      width: 40,
+      height: 40,
     },
+    corner: null,
   })
 
   function uploadImage(e: ChangeEvent<HTMLInputElement>) {
@@ -50,7 +51,7 @@ export default function Cropper() {
   function drawClipArea(
     coordinates: { x: number; y: number },
     selectorSize = 5,
-    action: "drag" | "hover" = "hover"
+    action: "down" | "hover" = "hover"
   ) {
     if (!canvas.current) return
 
@@ -59,6 +60,32 @@ export default function Cropper() {
     if (!ctx) return
 
     clearCanvas()
+
+    if (settings.corner !== null) {
+      if (settings.corner === "topLeft") {
+        const maxX =
+          coordinates.x * 2 > canvas.current.width - settings.clipping.width
+        const maxY =
+          coordinates.y * 2 > canvas.current.height - settings.clipping.height
+        setSettings({
+          ...settings,
+          clipping: {
+            ...settings.clipping,
+            x: maxX ? settings.clipping.x : coordinates.x * 2,
+            y: maxY ? settings.clipping.y : coordinates.y * 2,
+          },
+        })
+      } else if (settings.corner === "bottomRight") {
+        setSettings({
+          ...settings,
+          clipping: {
+            ...settings.clipping,
+            width: coordinates.x * 2 - settings.clipping.x,
+            height: coordinates.y * 2 - settings.clipping.y,
+          },
+        })
+      }
+    }
 
     // boundaries
     const left = {
@@ -86,9 +113,7 @@ export default function Cropper() {
     const bottom = {
       x: settings.clipping.x,
       y: settings.clipping.y + settings.clipping.height,
-      height:
-        canvas.current.height -
-        (settings.clipping.y + settings.clipping.height),
+      height: canvas.current.height - settings.clipping.y,
       width: settings.clipping.width,
     }
 
@@ -96,16 +121,6 @@ export default function Cropper() {
     const topLeft = {
       x: left.width,
       y: top.height,
-    }
-
-    const topRight = {
-      x: right.x,
-      y: top.height,
-    }
-
-    const bottomLeft = {
-      x: left.width,
-      y: bottom.y,
     }
 
     const bottomRight = {
@@ -151,42 +166,6 @@ export default function Cropper() {
 
     ctx2.beginPath()
     ctx2.arc(
-      topRight.x,
-      topRight.y,
-      detectHover(
-        topRight,
-        { x: coordinates?.x, y: coordinates?.y },
-        selectorSize / 2
-      )
-        ? selectorSize * 1.5
-        : selectorSize,
-      0,
-      360,
-      false
-    )
-    ctx2.closePath()
-    ctx2.fill()
-
-    ctx2.beginPath()
-    ctx2.arc(
-      bottomLeft.x,
-      bottomLeft.y,
-      detectHover(
-        bottomLeft,
-        { x: coordinates?.x, y: coordinates?.y },
-        selectorSize / 2
-      )
-        ? selectorSize * 1.5
-        : selectorSize,
-      0,
-      360,
-      false
-    )
-    ctx2.closePath()
-    ctx2.fill()
-
-    ctx2.beginPath()
-    ctx2.arc(
       bottomRight.x,
       bottomRight.y,
       detectHover(
@@ -203,8 +182,30 @@ export default function Cropper() {
     ctx2.closePath()
     ctx2.fill()
 
-    if (action === "drag") {
-      console.log("dragging")
+    if (action === "down") {
+      if (
+        detectHover(
+          topLeft,
+          { x: coordinates?.x, y: coordinates?.y },
+          selectorSize / 2
+        )
+      ) {
+        setSettings({
+          ...settings,
+          corner: "topLeft",
+        })
+      } else if (
+        detectHover(
+          bottomRight,
+          { x: coordinates?.x, y: coordinates?.y },
+          selectorSize / 2
+        )
+      ) {
+        setSettings({
+          ...settings,
+          corner: "bottomRight",
+        })
+      }
     }
   }
 
@@ -212,6 +213,8 @@ export default function Cropper() {
     if (!canvas.current) return
     const rect = canvas.current.getBoundingClientRect()
     if (!e) return
+    e.preventDefault()
+    e.stopPropagation()
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
     drawClipArea({ x, y })
@@ -221,10 +224,12 @@ export default function Cropper() {
     if (!canvas.current) return
     const rect = canvas.current.getBoundingClientRect()
     if (!e) return
+    e.preventDefault()
+    e.stopPropagation()
     const x = e?.clientX - rect.left
     const y = e?.clientY - rect.top
 
-    drawClipArea({ x, y }, 5, "drag")
+    drawClipArea({ x, y }, 5, "down")
   }
 
   function detectHover(
@@ -263,10 +268,11 @@ export default function Cropper() {
         <canvas
           ref={canvas}
           width={500}
-          height={300}
+          height={500}
           className={style.canvas}
           onMouseMove={(e) => handleMouseOver(e as any)}
           onMouseDown={(e) => handleMouseDown(e as any)}
+          onMouseUp={() => setSettings({ ...settings, corner: null })}
         />
       </div>
       <input type="file" onChange={uploadImage} />
