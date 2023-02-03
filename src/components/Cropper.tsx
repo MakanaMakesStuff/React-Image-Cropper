@@ -3,6 +3,7 @@ import style from "../styles/Components/Cropper.module.scss";
 
 export default function Cropper() {
 	const canvas = useRef<HTMLCanvasElement | null>(null);
+	const target = useRef<HTMLCanvasElement | null>(null);
 	const [settings, setSettings] = useState<{
 		clipping: { x: number; y: number; width: number; height: number };
 		corner: "topLeft" | "topRight" | "bottomLeft" | "bottomRight" | null;
@@ -293,6 +294,27 @@ export default function Cropper() {
 		ctx?.clearRect(0, 0, canvas.current.width, canvas.current.height);
 	}
 
+	function cropImage() {
+		if (!target.current || !canvas.current || !settings.background) return;
+		target.current.width = settings.clipping.width;
+		target.current.height = settings.clipping.height;
+		const ctx = target.current.getContext("2d");
+		if (!ctx) return;
+		const cropped = ctx.drawImage(
+			settings.background,
+			settings.clipping.x,
+			settings.clipping.y,
+			settings.clipping.width,
+			settings.clipping.height,
+			0,
+			0,
+			settings.clipping.width,
+			settings.clipping.height
+		);
+
+		console.log(cropped);
+	}
+
 	return (
 		<>
 			<div className={style.cropper}>
@@ -306,9 +328,12 @@ export default function Cropper() {
 					onMouseUp={() => setSettings({ ...settings, corner: null })}
 				/>
 			</div>
+
+			<canvas ref={target} width={200} height={200} />
 			<input type="file" onChange={uploadImage} />
 
 			<button onClick={clearCanvas}>Clear</button>
+			{settings.background ? <button onClick={cropImage}>Crop</button> : null}
 		</>
 	);
 }
