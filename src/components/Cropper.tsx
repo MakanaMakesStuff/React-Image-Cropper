@@ -1,339 +1,337 @@
-import { ChangeEvent, useEffect, useRef, useState } from "react";
-import style from "../styles/Components/Cropper.module.scss";
+import { ChangeEvent, useCallback, useState } from "react"
+
+export interface Coordinates {
+  x: number
+  y: number
+  diameter: number
+}
+
+export interface CropCorners {
+  topLeft: Coordinates
+  topRight: Coordinates
+  bottomLeft: Coordinates
+  bottomRight: Coordinates
+}
 
 export default function Cropper() {
-	const canvas = useRef<HTMLCanvasElement | null>(null);
-	const target = useRef<HTMLCanvasElement | null>(null);
-	const [settings, setSettings] = useState<{
-		clipping: { x: number; y: number; width: number; height: number };
-		corner: "topLeft" | "topRight" | "bottomLeft" | "bottomRight" | null;
-		background: HTMLImageElement | null;
-	}>({
-		clipping: {
-			x: 10,
-			y: 10,
-			width: 40,
-			height: 40,
-		},
-		corner: null,
-		background: null,
-	});
+  const [cropSettings, setCropSettings] = useState<{
+    canvas: HTMLCanvasElement | null
+    background: HTMLImageElement | null
+    coordinates: CropCorners
+  }>({
+    canvas: null,
+    background: null,
+    coordinates: {
+      topLeft: {
+        x: 10,
+        y: 10,
+        diameter: 5,
+      },
+      topRight: {
+        x: 290,
+        y: 10,
+        diameter: 5,
+      },
+      bottomLeft: {
+        x: 10,
+        y: 290,
+        diameter: 5,
+      },
+      bottomRight: {
+        x: 290,
+        y: 290,
+        diameter: 5,
+      },
+    },
+  })
 
-	function uploadImage(e: ChangeEvent<HTMLInputElement>) {
-		if (e.currentTarget.type !== "file") return;
+  const handleCanvasInitialLoad = useCallback((canvas: HTMLCanvasElement) => {
+    setCropSettings({
+      ...cropSettings,
+      canvas,
+    })
 
-		const file = e.currentTarget.files?.[0];
+    const coords = {
+      ...cropSettings.coordinates,
+      bottomLeft: {
+        ...cropSettings.coordinates.bottomLeft,
+        y: canvas.height - 10,
+      },
+      bottomRight: {
+        ...cropSettings.coordinates.bottomRight,
+        y: canvas.height - 10,
+      },
+    }
 
-		if (!file) return;
+    drawCropOverlay(canvas, coords)
+  }, [])
 
-		const image = new Image(0, 0);
+  function uploadImage(e: ChangeEvent) {
+    if (!cropSettings.canvas) return
 
-		image.src = URL.createObjectURL(file);
+    const c = cropSettings.canvas
 
-		drawCanvasBackground(image);
-	}
+    const input = e.currentTarget as HTMLInputElement
 
-	function drawCanvasBackground(
-		background: HTMLImageElement,
-		isLoaded = false
-	) {
-		clearCanvas();
+    const file = input.files?.[0]
 
-		if (isLoaded) {
-			if (!canvas.current) return;
+    if (!file) return
 
-			canvas.current.width = background.naturalWidth;
-			canvas.current.height = background.naturalHeight;
+    const url = URL.createObjectURL(file)
 
-			const ctx = canvas.current.getContext("2d");
+    const image = new Image(c.width, c.height)
 
-			ctx?.drawImage(background, 0, 0);
+    image.src = url
 
-			setSettings({
-				...settings,
-				background,
-			});
-		} else {
-			background.onload = () => {
-				if (!canvas.current) return;
+    drawImageToCanvas(image)
+  }
 
-				canvas.current.width = background.naturalWidth;
-				canvas.current.height = background.naturalHeight;
+  function drawImageToCanvas(background?: HTMLImageElement) {
+    clearCanvas()
 
-				const ctx = canvas.current.getContext("2d");
+    if (cropSettings.background) {
+      if (!cropSettings.canvas) return
 
-				ctx?.drawImage(background, 0, 0);
+      const c = cropSettings.canvas
 
-				setSettings({
-					...settings,
-					background,
-				});
+      const coords = {
+        ...cropSettings.coordinates,
+        bottomLeft: {
+          ...cropSettings.coordinates.bottomLeft,
+          y: c.height - 10,
+        },
+        bottomRight: {
+          ...cropSettings.coordinates.bottomRight,
+          y: c.height - 10,
+        },
+      }
 
-				drawClipArea({ x: 0, y: 0 });
-			};
-		}
-	}
+      setCropSettings({
+        ...cropSettings,
+        coordinates: {
+          ...cropSettings.coordinates,
+          bottomLeft: {
+            ...cropSettings.coordinates.bottomLeft,
+            y: c.height - 10,
+          },
+          bottomRight: {
+            ...cropSettings.coordinates.bottomRight,
+            y: c.height - 10,
+          },
+        },
+      })
 
-	/**
-	 * We need to define left, right, top, and bottom boundaries that exist outside the clipping area
-	 */
-	function drawClipArea(
-		coordinates: { x: number; y: number },
-		selectorSize = 5,
-		action: "down" | "hover" = "hover"
-	) {
-		if (!canvas.current) return;
+      const ctx = c.getContext("2d")
 
-		const ctx = canvas.current.getContext("2d");
+      ctx?.drawImage(cropSettings.background, 0, 0, c.width, c.height)
 
-		if (!ctx) return;
+      ctx?.fill()
+    } else {
+      if (!background) return
+      background.onload = () => {
+        if (!cropSettings.canvas) return
 
-		if (!settings.background) clearCanvas();
+        const c = cropSettings.canvas
 
-		if (settings.background) drawCanvasBackground(settings.background, true);
+        c.height =
+          (background.naturalHeight / background.naturalWidth) * c.height
 
-		if (settings.corner !== null) {
-			if (settings.corner === "topLeft") {
-				const maxX =
-					coordinates.x * 2 > canvas.current.width - settings.clipping.width;
-				const maxY =
-					coordinates.y * 2 > canvas.current.height - settings.clipping.height;
-				setSettings({
-					...settings,
-					clipping: {
-						...settings.clipping,
-						x: maxX ? settings.clipping.x : coordinates.x * 2,
-						y: maxY ? settings.clipping.y : coordinates.y * 2,
-					},
-				});
-			} else if (settings.corner === "bottomRight") {
-				setSettings({
-					...settings,
-					clipping: {
-						...settings.clipping,
-						width: coordinates.x * 2 - settings.clipping.x,
-						height: coordinates.y * 2 - settings.clipping.y,
-					},
-				});
-			}
-		}
+        const coords = {
+          ...cropSettings.coordinates,
+          bottomLeft: {
+            ...cropSettings.coordinates.bottomLeft,
+            y: c.height - 10,
+          },
+          bottomRight: {
+            ...cropSettings.coordinates.bottomRight,
+            y: c.height - 10,
+          },
+        }
 
-		// boundaries
-		const left = {
-			x: 0,
-			y: 0,
-			height: canvas.current.height,
-			width: settings.clipping.x,
-		};
+        setCropSettings({
+          ...cropSettings,
+          coordinates: {
+            ...cropSettings.coordinates,
+            bottomLeft: {
+              ...cropSettings.coordinates.bottomLeft,
+              y: c.height - 10,
+            },
+            bottomRight: {
+              ...cropSettings.coordinates.bottomRight,
+              y: c.height - 10,
+            },
+          },
+          background,
+        })
 
-		const top = {
-			x: settings.clipping.x,
-			y: 0,
-			width: settings.clipping.width,
-			height: settings.clipping.y,
-		};
+        const ctx = c.getContext("2d")
 
-		const right = {
-			x: settings.clipping.x + settings.clipping.width,
-			y: 0,
-			height: canvas.current.height,
-			width:
-				canvas.current.width - (settings.clipping.x + settings.clipping.width),
-		};
+        ctx?.drawImage(background, 0, 0, c.width, c.height)
 
-		const bottom = {
-			x: settings.clipping.x,
-			y: settings.clipping.y + settings.clipping.height,
-			height: canvas.current.height - settings.clipping.y,
-			width: settings.clipping.width,
-		};
+        ctx?.fill()
 
-		// corners
-		const topLeft = {
-			x: left.width,
-			y: top.height,
-		};
+        drawCropOverlay(c, coords)
+      }
+    }
+  }
 
-		const bottomRight = {
-			x: right.x,
-			y: bottom.y,
-		};
+  function drawCropOverlay(
+    canvas: HTMLCanvasElement,
+    coordinates?: CropCorners
+  ) {
+    if (!coordinates) return
+    const ctx1 = canvas.getContext("2d")
 
-		// draw boundaries
-		ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+    if (!ctx1) return
 
-		ctx.fillRect(left.x, left.y, left.width, left.height);
+    // overlay style
+    ctx1.fillStyle = "rgba(0, 0, 0, 0.25)"
 
-		ctx.fillRect(top.x, top.y, top.width, top.height);
+    // top
+    ctx1.beginPath()
+    ctx1.rect(0, 0, canvas.width, coordinates.topLeft.y)
+    ctx1.fill()
 
-		ctx.fillRect(right.x, right.y, right.width, right.height);
+    // bottom
+    ctx1.beginPath()
+    ctx1.rect(
+      0,
+      coordinates.bottomLeft.y,
+      canvas.width,
+      canvas.height - coordinates.bottomLeft.y
+    )
+    ctx1.fill()
 
-		ctx.fillRect(bottom.x, bottom.y, bottom.width, bottom.height);
+    // left
+    ctx1.beginPath()
+    ctx1.rect(
+      0,
+      coordinates.topLeft.y,
+      coordinates.topLeft.x,
+      coordinates.bottomLeft.y - coordinates.topLeft.y
+    )
+    ctx1.fill()
 
-		// draw corners
-		const ctx2 = canvas.current.getContext("2d");
+    // right
+    ctx1.beginPath()
+    ctx1.rect(
+      coordinates.topRight.x,
+      coordinates.topRight.y,
+      canvas.width - coordinates.topRight.y,
+      coordinates.bottomRight.y - coordinates.topRight.y
+    )
+    ctx1.fill()
 
-		if (!ctx2) return;
+    // handles style
+    ctx1.fillStyle = "white"
 
-		ctx2.fillStyle = "white";
+    // topLeft
+    ctx1.beginPath()
+    ctx1.arc(
+      coordinates.topLeft.x,
+      coordinates.topLeft.y,
+      coordinates.topLeft.diameter,
+      0,
+      365
+    )
+    ctx1.fill()
 
-		ctx2.beginPath();
-		ctx2.arc(
-			topLeft.x,
-			topLeft.y,
-			detectHover(
-				topLeft,
-				{ x: coordinates?.x, y: coordinates?.y },
-				selectorSize / 2
-			)
-				? selectorSize * 1.5
-				: selectorSize,
-			0,
-			360,
-			false
-		);
-		ctx2.closePath();
-		ctx2.fill();
+    // bottomRight
+    ctx1.beginPath()
+    ctx1.arc(
+      coordinates.bottomRight.x,
+      coordinates.bottomRight.y,
+      coordinates.bottomRight.diameter,
+      0,
+      365
+    )
+    ctx1.fill()
+  }
 
-		ctx2.beginPath();
-		ctx2.arc(
-			bottomRight.x,
-			bottomRight.y,
-			detectHover(
-				bottomRight,
-				{ x: coordinates?.x, y: coordinates?.y },
-				selectorSize / 2
-			)
-				? selectorSize * 1.5
-				: selectorSize,
-			0,
-			360,
-			false
-		);
-		ctx2.closePath();
-		ctx2.fill();
+  function handleHover(e: MouseEvent) {
+    const target = e.target as HTMLCanvasElement
+    const rect = target.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
 
-		if (action === "down") {
-			if (
-				detectHover(
-					topLeft,
-					{ x: coordinates?.x, y: coordinates?.y },
-					selectorSize / 2
-				)
-			) {
-				setSettings({
-					...settings,
-					corner: "topLeft",
-				});
-			} else if (
-				detectHover(
-					bottomRight,
-					{ x: coordinates?.x, y: coordinates?.y },
-					selectorSize / 2
-				)
-			) {
-				setSettings({
-					...settings,
-					corner: "bottomRight",
-				});
-			}
-		}
-	}
+    const coords = cropSettings.coordinates
 
-	function handleMouseOver(e?: MouseEvent) {
-		if (!canvas.current) return;
-		const rect = canvas.current.getBoundingClientRect();
-		if (!e) return;
-		e.preventDefault();
-		e.stopPropagation();
-		const x = e.clientX - rect.left;
-		const y = e.clientY - rect.top;
-		drawClipArea({ x, y }, 5, "hover");
-	}
+    if (isGrabbingHandle(coords.bottomRight, { x, y })) {
+      setCropSettings({
+        ...cropSettings,
+        coordinates: {
+          ...cropSettings.coordinates,
+          bottomRight: {
+            ...cropSettings.coordinates.bottomRight,
+            diameter: 6.5,
+          },
+        },
+      })
+    } else if (isGrabbingHandle(coords.topLeft, { x, y })) {
+      setCropSettings({
+        ...cropSettings,
+        coordinates: {
+          ...cropSettings.coordinates,
+          topLeft: {
+            ...cropSettings.coordinates.topLeft,
+            diameter: 6.5,
+          },
+        },
+      })
+    } else {
+      setCropSettings({
+        ...cropSettings,
+        coordinates: {
+          ...cropSettings.coordinates,
+          bottomRight: {
+            ...cropSettings.coordinates.bottomRight,
+            diameter: 5,
+          },
+          topLeft: {
+            ...cropSettings.coordinates.topLeft,
+            diameter: 5,
+          },
+        },
+      })
+    }
+    clearCanvas()
+    drawCropOverlay(target, cropSettings.coordinates)
+  }
 
-	function handleMouseDown(e?: MouseEvent) {
-		if (!canvas.current) return;
-		const rect = canvas.current.getBoundingClientRect();
-		if (!e) return;
-		e.preventDefault();
-		e.stopPropagation();
-		const x = e?.clientX - rect.left;
-		const y = e?.clientY - rect.top;
+  function isGrabbingHandle(
+    coords: Coordinates,
+    mouse: { x: number; y: number }
+  ) {
+    if (
+      coords.x - 2.5 < mouse.x &&
+      coords.x + 2.5 > mouse.x &&
+      coords.y - 2.5 < mouse.y &&
+      coords.y + 2.5 > mouse.y
+    ) {
+      return true
+    }
+  }
 
-		drawClipArea({ x, y }, 5, "down");
-	}
+  function clearCanvas() {
+    if (!cropSettings.canvas) return
+    const ctx = cropSettings.canvas.getContext("2d")
+    ctx?.clearRect(0, 0, cropSettings.canvas.width, cropSettings.canvas.height)
+  }
 
-	function detectHover(
-		target: {
-			x: number;
-			y: number;
-		},
-		coordinates: { x: number; y: number },
-		radius: number
-	) {
-		const targetX = target.x / 2;
-		const targetY = target.y / 2;
+  return (
+    <>
+      <div className="cropper">
+        <canvas
+          ref={handleCanvasInitialLoad}
+          width={300}
+          height={300}
+          onMouseMove={(e) => handleHover(e as any)}
+        />
+        <canvas ref={null} />
+      </div>
 
-		if (
-			coordinates.x < targetX + radius &&
-			coordinates.x > targetX - radius &&
-			coordinates.y < targetY + radius &&
-			coordinates.y > targetY - radius
-		) {
-			return true;
-		}
-	}
-
-	useEffect(() => drawClipArea({ x: 0, y: 0 }), []);
-
-	function clearCanvas() {
-		if (!canvas.current) return;
-
-		const ctx = canvas.current.getContext("2d");
-
-		ctx?.clearRect(0, 0, canvas.current.width, canvas.current.height);
-	}
-
-	function cropImage() {
-		if (!target.current || !canvas.current || !settings.background) return;
-		target.current.width = settings.clipping.width;
-		target.current.height = settings.clipping.height;
-		const ctx = target.current.getContext("2d");
-		if (!ctx) return;
-		const cropped = ctx.drawImage(
-			settings.background,
-			settings.clipping.x,
-			settings.clipping.y,
-			settings.clipping.width,
-			settings.clipping.height,
-			0,
-			0,
-			settings.clipping.width,
-			settings.clipping.height
-		);
-
-		console.log(cropped);
-	}
-
-	return (
-		<>
-			<div className={style.cropper}>
-				<canvas
-					ref={canvas}
-					width={500}
-					height={500}
-					className={style.canvas}
-					onMouseMove={(e) => handleMouseOver(e as any)}
-					onMouseDown={(e) => handleMouseDown(e as any)}
-					onMouseUp={() => setSettings({ ...settings, corner: null })}
-				/>
-			</div>
-
-			<canvas ref={target} width={200} height={200} />
-			<input type="file" onChange={uploadImage} />
-
-			<button onClick={clearCanvas}>Clear</button>
-			{settings.background ? <button onClick={cropImage}>Crop</button> : null}
-		</>
-	);
+      <input type="file" onChange={uploadImage} />
+      <button>crop</button>
+    </>
+  )
 }
