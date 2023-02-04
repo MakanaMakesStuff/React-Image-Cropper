@@ -1,5 +1,5 @@
 import { ChangeEvent, useCallback, useRef, useState } from "react";
-
+import style from "../styles/Components/Cropper.module.scss";
 export interface Coordinates {
 	x: number;
 	y: number;
@@ -310,6 +310,9 @@ export default function Cropper() {
 		ctx?.clearRect(0, 0, cropSettings.canvas.width, cropSettings.canvas.height);
 	}
 
+	const [message, setMessage] = useState<string | null>(null);
+
+	let timer: any;
 	function cropImage() {
 		if (!cropSettings.canvas || !cropped.current) return;
 		const ctx1 = cropSettings.canvas.getContext("2d");
@@ -340,11 +343,19 @@ export default function Cropper() {
 		);
 
 		ctx2.fill();
+		setMessage("Click here to see crop");
+
+		timer = setTimeout(() => {
+			setMessage(null);
+			clearTimeout(timer);
+		}, 1000);
 	}
+
+	const [open, setOpen] = useState(false);
 
 	return (
 		<>
-			<div className="cropper">
+			<div className={style.cropper}>
 				<canvas
 					ref={handleCanvasInitialLoad}
 					width={300}
@@ -358,11 +369,23 @@ export default function Cropper() {
 						});
 					}}
 				/>
-				<canvas ref={cropped} />
+				<label>
+					<button onClick={() => setOpen(!open)}>Preview</button>
+					{message ? <span>{message}</span> : null}
+				</label>
+
+				<div className={`${style.preview} ${open ? style.opened : ""}`}>
+					<>
+						<button onClick={() => setOpen(false)}>close</button>
+						<canvas ref={cropped} />
+					</>
+				</div>
 			</div>
 
-			<input type="file" onChange={uploadImage} />
-			<button onClick={cropImage}>crop</button>
+			<div className={style.inputs}>
+				<input type="file" onChange={uploadImage} />
+				<button onClick={cropImage}>crop</button>
+			</div>
 		</>
 	);
 }
