@@ -7,7 +7,11 @@
 	width: min-content;
 	height: min-content;
 
-	> label {
+	>canvas {
+		cursor: pointer;
+	}
+
+	>label {
 		button {
 			border: unset;
 			border-radius: 3px;
@@ -21,7 +25,7 @@
 			}
 		}
 
-		> span {
+		>span {
 			color: cornflowerblue;
 		}
 
@@ -39,14 +43,19 @@
 	height: 100vh;
 	background-color: rgba(0, 0, 0, 0.3);
 	transition: opacity 0.25s ease;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+	padding: 2em;
 
-	> button {
+	>button {
 		position: absolute;
 		top: 1em;
 		right: 1em;
 		border: unset;
 		border-radius: 3px;
-		background-color:tomato;
+		background-color: tomato;
 		padding: 0.4em 1em;
 		color: white;
 
@@ -64,6 +73,12 @@
 		opacity: 0;
 		pointer-events: none;
 	}
+
+	>canvas {
+		width: 100%;
+		max-width: 500px;
+		height: auto;
+	}
 }
 
 .inputs {
@@ -78,7 +93,7 @@
 	button {
 		border: unset;
 		border-radius: 3px;
-		background-color:darkcyan;
+		background-color: darkcyan;
 		padding: 0.4em 1em;
 		color: white;
 		width: max-content;
@@ -89,7 +104,8 @@
 		}
 	}
 
-	input, button {
+	input,
+	button {
 		margin: 1em 0;
 	}
 }

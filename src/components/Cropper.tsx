@@ -1,13 +1,15 @@
-import { ChangeEvent, useCallback, useRef, useState } from "react"
+import { ChangeEvent, useCallback, useEffect, useRef, useState } from "react"
 import style from "../styles/Components/Cropper.module.scss"
 export interface Coordinates {
   x: number
   y: number
   diameter: number
+  init?: Coordinates
 }
 
 export interface CropCorners {
   topLeft: Coordinates
+  center: Coordinates
   bottomRight: Coordinates
 }
 
@@ -16,6 +18,7 @@ export interface CropSettings {
   background: HTMLImageElement | null
   coordinates: CropCorners
   selected: "topLeft" | "bottomRight" | null
+  moving: boolean
 }
 
 export default function Cropper() {
@@ -24,6 +27,7 @@ export default function Cropper() {
     background: HTMLImageElement | null
     coordinates: CropCorners
     selected: "topLeft" | "bottomRight" | null
+    moving: boolean
   }>({
     canvas: null,
     background: null,
@@ -33,6 +37,11 @@ export default function Cropper() {
         y: 10,
         diameter: 5,
       },
+      center: {
+        x: 0,
+        y: 0,
+        diameter: 5,
+      },
       bottomRight: {
         x: 290,
         y: 290,
@@ -40,6 +49,7 @@ export default function Cropper() {
       },
     },
     selected: null,
+    moving: false,
   })
 
   const cropped = useRef<HTMLCanvasElement | null>(null)
@@ -119,6 +129,11 @@ export default function Cropper() {
           ...cropSettings,
           coordinates: {
             ...cropSettings.coordinates,
+            center: {
+              ...cropSettings.coordinates.center,
+              x: c.width / 2,
+              y: c.height / 2,
+            },
             bottomRight: {
               ...cropSettings.coordinates.bottomRight,
               x: c.width - 10,
@@ -199,6 +214,24 @@ export default function Cropper() {
       365
     )
     ctx1.fill()
+    ctx1.closePath()
+
+    ctx1.fillStyle = "gray"
+
+    // center
+    ctx1.beginPath()
+    ctx1.arc(
+      (coordinates.bottomRight.x + coordinates.topLeft.x) / 2,
+      (coordinates.bottomRight.y + coordinates.topLeft.y) / 2,
+      coordinates.center.diameter,
+      0,
+      365
+    )
+    ctx1.fill()
+    ctx1.closePath()
+
+    // reset fill style
+    ctx1.fillStyle = "white"
 
     // bottomRight
     ctx1.beginPath()
@@ -210,6 +243,7 @@ export default function Cropper() {
       365
     )
     ctx1.fill()
+    ctx1.closePath()
   }
 
   function handleMouse(e: MouseEvent, action: string | null = null) {
@@ -237,6 +271,41 @@ export default function Cropper() {
       if (action === "down") {
         settings.selected = "bottomRight"
       }
+    } else if (
+      isGrabbingHandle(
+        coords.center,
+        { x, y },
+        (settings.coordinates.bottomRight.x - settings.coordinates.topLeft.x) /
+          2 -
+          5,
+        (settings.coordinates.bottomRight.y - settings.coordinates.topLeft.y) /
+          2 -
+          5
+      )
+    ) {
+      settings = {
+        ...settings,
+        coordinates: {
+          ...settings.coordinates,
+          center: {
+            ...settings.coordinates.center,
+            diameter: 6.5,
+          },
+        },
+      }
+
+      if (action === "down") {
+        settings.selected = null
+        settings.moving = true
+        const { init: centerInit, ...rest } = settings.coordinates.center
+        const { init: topLeftInit, ...topLeftRest } =
+          settings.coordinates.topLeft
+        const { init: bottomRightInit, ...bottomRightRest } =
+          settings.coordinates.bottomRight
+        settings.coordinates.center.init = rest
+        settings.coordinates.topLeft.init = topLeftRest
+        settings.coordinates.bottomRight.init = bottomRightRest
+      }
     } else if (isGrabbingHandle(coords.topLeft, { x, y })) {
       settings = {
         ...settings,
@@ -257,15 +326,20 @@ export default function Cropper() {
         ...settings,
         coordinates: {
           ...settings.coordinates,
-          bottomRight: {
-            ...settings.coordinates.bottomRight,
-            diameter: 5,
-          },
           topLeft: {
             ...settings.coordinates.topLeft,
             diameter: 5,
           },
+          center: {
+            ...settings.coordinates.center,
+            diameter: 5,
+          },
+          bottomRight: {
+            ...settings.coordinates.bottomRight,
+            diameter: 5,
+          },
         },
+        moving: false,
       }
     }
 
@@ -274,18 +348,18 @@ export default function Cropper() {
         posY = y
 
       if (settings.selected === "topLeft") {
-        if (x >= settings.coordinates.bottomRight.x - 10) {
-          posX = settings.coordinates.bottomRight.x - 10
+        if (x >= settings.coordinates.bottomRight.x - 20) {
+          posX = settings.coordinates.bottomRight.x - 20
         }
-        if (y >= settings.coordinates.bottomRight.y - 10) {
-          posY = settings.coordinates.bottomRight.y - 10
+        if (y >= settings.coordinates.bottomRight.y - 20) {
+          posY = settings.coordinates.bottomRight.y - 20
         }
       } else {
-        if (x <= settings.coordinates.topLeft.x + 10) {
-          posX = settings.coordinates.topLeft.x + 10
+        if (x <= settings.coordinates.topLeft.x + 20) {
+          posX = settings.coordinates.topLeft.x + 20
         }
-        if (y <= settings.coordinates.topLeft.y + 10) {
-          posY = settings.coordinates.topLeft.y + 10
+        if (y <= settings.coordinates.topLeft.y + 20) {
+          posY = settings.coordinates.topLeft.y + 20
         }
       }
 
@@ -298,6 +372,39 @@ export default function Cropper() {
             x: posX,
             y: posY,
           },
+          center: {
+            ...settings.coordinates.center,
+            x:
+              (settings.coordinates.bottomRight.x +
+                settings.coordinates.topLeft.x) /
+              2,
+            y:
+              (settings.coordinates.bottomRight.y +
+                settings.coordinates.topLeft.y) /
+              2,
+          },
+        },
+      }
+    } else if (settings.moving && settings.coordinates.center.init) {
+      const xDiff = x - settings.coordinates.center.init.x
+      const yDiff = y - settings.coordinates.center.init.y
+
+      settings.coordinates = {
+        ...settings.coordinates,
+        topLeft: {
+          ...settings.coordinates.topLeft,
+          x: settings.coordinates.topLeft.init?.x! + xDiff,
+          y: settings.coordinates.topLeft.init?.y! + yDiff,
+        },
+        center: {
+          ...settings.coordinates.center,
+          x,
+          y,
+        },
+        bottomRight: {
+          ...settings.coordinates.bottomRight,
+          x: settings.coordinates.bottomRight.init?.x! + xDiff,
+          y: settings.coordinates.bottomRight.init?.y! + yDiff,
         },
       }
     }
@@ -311,13 +418,15 @@ export default function Cropper() {
 
   function isGrabbingHandle(
     coords: Coordinates,
-    mouse: { x: number; y: number }
+    mouse: { x: number; y: number },
+    xRadius = 2.5,
+    yRadius = 2.5
   ) {
     if (
-      coords.x - 2.5 < mouse.x &&
-      coords.x + 2.5 > mouse.x &&
-      coords.y - 2.5 < mouse.y &&
-      coords.y + 2.5 > mouse.y
+      coords.x - xRadius < mouse.x &&
+      coords.x + xRadius > mouse.x &&
+      coords.y - yRadius < mouse.y &&
+      coords.y + yRadius > mouse.y
     ) {
       return true
     }
@@ -332,6 +441,48 @@ export default function Cropper() {
   const [message, setMessage] = useState<string | null>(null)
 
   let timer: any
+  function startCrop() {
+    const settings: Partial<CropSettings> = cropSettings
+
+    settings.coordinates = {
+      ...settings.coordinates,
+      topLeft: {
+        ...settings.coordinates?.topLeft!,
+        diameter: 0,
+      },
+      center: {
+        ...settings.coordinates?.center!,
+        diameter: 0,
+      },
+      bottomRight: {
+        ...settings.coordinates?.bottomRight!,
+        diameter: 0,
+      },
+    }
+
+    drawImageToCanvas(cropSettings.background!, settings as any)
+
+    cropImage()
+
+    settings.coordinates = {
+      ...settings.coordinates,
+      topLeft: {
+        ...settings.coordinates?.topLeft!,
+        diameter: 5,
+      },
+      center: {
+        ...settings.coordinates?.center!,
+        diameter: 5,
+      },
+      bottomRight: {
+        ...settings.coordinates?.bottomRight!,
+        diameter: 5,
+      },
+    }
+
+    drawCropOverlay(settings.canvas!, settings.coordinates)
+  }
+
   function cropImage() {
     if (!cropSettings.canvas || !cropped.current) return
     const ctx1 = cropSettings.canvas.getContext("2d")
@@ -385,6 +536,7 @@ export default function Cropper() {
             setCropSettings({
               ...cropSettings,
               selected: null,
+              moving: false,
             })
           }}
         />
@@ -403,7 +555,7 @@ export default function Cropper() {
 
       <div className={style.inputs}>
         <input type="file" onChange={uploadImage} />
-        <button onClick={cropImage}>crop</button>
+        <button onClick={startCrop}>crop</button>
       </div>
     </>
   )
