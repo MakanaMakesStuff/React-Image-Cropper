@@ -531,14 +531,23 @@ export default function Cropper() {
 					width={300}
 					height={300}
 					onMouseMove={(e) => handleMouse(e as any)}
+					onTouchMove={(e) => handleMouse(e as any)}
 					onMouseDown={(e) => handleMouse(e as any, "down")}
-					onMouseUp={() => {
+					onTouchStart={(e) => handleMouse(e as any, "down")}
+					onMouseUp={() =>
 						setCropSettings({
 							...cropSettings,
 							selected: null,
 							moving: false,
-						});
-					}}
+						})
+					}
+					onTouchEnd={(e) =>
+						setCropSettings({
+							...cropSettings,
+							selected: null,
+							moving: false,
+						})
+					}
 				/>
 				<label>
 					<button onClick={() => setOpen(!open)}>Preview</button>
