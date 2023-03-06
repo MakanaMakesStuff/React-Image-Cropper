@@ -513,7 +513,7 @@ export default function Cropper() {
 		);
 
 		ctx2.fill();
-		setMessage("Click here to open cropped image.");
+		setMessage("Click here to view cropped image.");
 
 		timer = setTimeout(() => {
 			setMessage(null);
