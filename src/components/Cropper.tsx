@@ -248,6 +248,7 @@ export default function Cropper() {
     action: string | null = null,
     type: "touch" | "mouse" = "mouse"
   ) {
+    e.preventDefault()
     if (!cropSettings.background) return
     const target = cropSettings.canvas
     if (!target) return
@@ -560,13 +561,15 @@ export default function Cropper() {
               moving: false,
             })
           }
-          onTouchEnd={(e) =>
+          onTouchEnd={(e) => {
+            e.preventDefault()
             setCropSettings({
               ...cropSettings,
               selected: null,
               moving: false,
             })
-          }
+          }}
+          onTouchCancel={(e) => e.preventDefault()}
         />
 
         <div
