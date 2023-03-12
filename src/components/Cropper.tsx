@@ -537,6 +537,7 @@ export default function Cropper() {
           onTouchMove={(e) => handleMouse(e as any)}
           onMouseDown={(e) => handleMouse(e as any, "down")}
           onTouchStart={(e) => handleMouse(e as any, "down")}
+          onDrag={(e) => handleMouse(e as any)}
           onMouseUp={() =>
             setCropSettings({
               ...cropSettings,
