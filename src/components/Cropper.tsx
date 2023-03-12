@@ -31,17 +31,17 @@ export default function Cropper() {
       topLeft: {
         x: 10,
         y: 10,
-        diameter: 5,
+        diameter: 6.5,
       },
       center: {
         x: 0,
         y: 0,
-        diameter: 5,
+        diameter: 6.5,
       },
       bottomRight: {
         x: 290,
         y: 290,
-        diameter: 5,
+        diameter: 6.5,
       },
     },
     selected: null,
@@ -243,12 +243,28 @@ export default function Cropper() {
     ctx1.closePath()
   }
 
-  function handleMouse(e: MouseEvent, action: string | null = null) {
+  function handleMouse(
+    e: MouseEvent | TouchEvent,
+    action: string | null = null,
+    type: "touch" | "mouse" = "mouse"
+  ) {
     if (!cropSettings.background) return
-    const target = e.target as HTMLCanvasElement
+    const target = cropSettings.canvas
+    if (!target) return
     const rect = target.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
+
+    let x = 0
+    let y = 0
+
+    if (type === "mouse") {
+      const ev = e as MouseEvent
+      x = ev.clientX - rect.left
+      y = ev.clientY - rect.top
+    } else {
+      const ev = e as TouchEvent
+      x = ev.targetTouches?.[0]?.clientX - rect.left
+      y = ev.targetTouches?.[0]?.clientY - rect.top
+    }
 
     let settings = cropSettings
 
@@ -261,7 +277,7 @@ export default function Cropper() {
           ...settings.coordinates,
           bottomRight: {
             ...settings.coordinates.bottomRight,
-            diameter: 6.5,
+            diameter: 8.5,
           },
         },
       }
@@ -287,7 +303,7 @@ export default function Cropper() {
           ...settings.coordinates,
           center: {
             ...settings.coordinates.center,
-            diameter: 6.5,
+            diameter: 8.5,
           },
         },
       }
@@ -311,7 +327,7 @@ export default function Cropper() {
           ...settings.coordinates,
           topLeft: {
             ...settings.coordinates.topLeft,
-            diameter: 6.5,
+            diameter: 8.5,
           },
         },
       }
@@ -326,15 +342,15 @@ export default function Cropper() {
           ...settings.coordinates,
           topLeft: {
             ...settings.coordinates.topLeft,
-            diameter: 5,
+            diameter: 6.5,
           },
           center: {
             ...settings.coordinates.center,
-            diameter: 5,
+            diameter: 6.5,
           },
           bottomRight: {
             ...settings.coordinates.bottomRight,
-            diameter: 5,
+            diameter: 6.5,
           },
         },
         moving: false,
@@ -417,8 +433,8 @@ export default function Cropper() {
   function isGrabbingHandle(
     coords: Coordinates,
     mouse: { x: number; y: number },
-    xRadius = 2.5,
-    yRadius = 2.5
+    xRadius = 3.25,
+    yRadius = 3.25
   ) {
     if (
       coords.x - xRadius < mouse.x &&
@@ -468,15 +484,15 @@ export default function Cropper() {
       ...settings.coordinates,
       topLeft: {
         ...settings.coordinates?.topLeft!,
-        diameter: 5,
+        diameter: 6.5,
       },
       center: {
         ...settings.coordinates?.center!,
-        diameter: 5,
+        diameter: 6.5,
       },
       bottomRight: {
         ...settings.coordinates?.bottomRight!,
-        diameter: 5,
+        diameter: 6.5,
       },
     }
 
@@ -534,10 +550,9 @@ export default function Cropper() {
           width={300}
           height={300}
           onMouseMove={(e) => handleMouse(e as any)}
-          onTouchMove={(e) => handleMouse(e as any)}
+          onTouchMove={(e) => handleMouse(e as any, null, "touch")}
           onMouseDown={(e) => handleMouse(e as any, "down")}
-          onTouchStart={(e) => handleMouse(e as any, "down")}
-          onDrag={(e) => handleMouse(e as any)}
+          onTouchStart={(e) => handleMouse(e as any, "down", "touch")}
           onMouseUp={() =>
             setCropSettings({
               ...cropSettings,
