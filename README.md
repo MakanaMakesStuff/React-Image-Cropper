@@ -8,4 +8,5 @@ An image cropper I created using typescript, canvas html element, and react. The
 
 If you can make use of this and or make it better please go ahead. I would like to people to engage :)
 
-<img src="https://user-images.githubusercontent.com/37227196/223230634-5b807890-4c21-452d-aa6b-03fd98d4d197.png" alt="Bartr Trading Image" />
+![image](https://user-images.githubusercontent.com/37227196/224552159-b7aa9e9c-ba2b-4fad-ba34-3b361a1d1244.png)
+
