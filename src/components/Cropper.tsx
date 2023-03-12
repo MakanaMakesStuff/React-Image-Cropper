@@ -244,6 +244,7 @@ export default function Cropper() {
   }
 
   function handleMouse(e: MouseEvent, action: string | null = null) {
+    if (!cropSettings.background) return
     const target = e.target as HTMLCanvasElement
     const rect = target.getBoundingClientRect()
     const x = e.clientX - rect.left
