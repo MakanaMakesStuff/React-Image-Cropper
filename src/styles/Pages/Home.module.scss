@@ -1,0 +1,11 @@
+.page {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+	background: linear-gradient(to top,
+			rgba(white, 1),
+			rgba(black, 0.1));
+	height: 100vh;
+	padding: 1em;
+}
