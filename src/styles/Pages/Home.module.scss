@@ -1,4 +1,7 @@
 .page {
+	position: fixed;
+	top: 0;
+	left: 0;
 	display: flex;
 	flex-direction: column;
 	justify-content: center;
@@ -7,5 +10,7 @@
 			rgba(white, 1),
 			rgba(black, 0.1));
 	height: 100vh;
+	width: 100vw;
 	padding: 1em;
+	overflow: hidden;
 }
