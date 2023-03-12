@@ -78,7 +78,7 @@
 		left: 0;
 		width: 100vw;
 		height: 100vh;
-		background-color: rgba(0, 0, 0, 0.5);
+		background-color: rgba(0, 0, 0, 0.75);
 		transition: opacity 0.25s ease;
 		display: flex;
 		flex-direction: column;
@@ -127,6 +127,13 @@
 				align-items: center;
 			}
 
+
+			>a,
+			>button {
+				font-family: Arial, Helvetica, sans-serif;
+				font-size: 1rem;
+				text-transform: capitalize;
+			}
 		}
 
 		&.opened {
